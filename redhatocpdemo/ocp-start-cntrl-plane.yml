@@ -2,6 +2,6 @@
 - hosts: localhost
   tasks:
   - name: Power On
-    azure_rm_virtualmachineazure_rm_virtualmachine:
+    azure_rm_virtualmachine:
       resource_group: redhatocpdemo
       name: ocpcluster-bastion
