@@ -1,5 +1,7 @@
 #Ansible Automation Script to start Bastion and Master cs_vmsnapshot
-- name: Power On
-  azure_rm_virtualmachine:
-    resource_group: redhatocpdemo
-    name: ocpcluster-bastion
+- hosts: localhost
+  tasks:
+  - name: Power On
+    azure_rm_virtualmachineazure_rm_virtualmachine:
+      resource_group: redhatocpdemo
+      name: ocpcluster-bastion
