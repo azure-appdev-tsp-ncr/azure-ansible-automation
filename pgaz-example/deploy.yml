@@ -9,7 +9,7 @@
 
     - set_fact:
         deployment_name: "{{ environ }}-{{ playbook_vars.app_name }}-db-deployment"
-        serverName: "{{ environ }}-{{ playbook_vars.app_name }}"
+        serverName: "ghtsp{{ environ }}pgazpsql"
         master_key_vualt: "ghtsp01-{{ environ }}-cloud-dbe"
         developer_key_vualt: "ghtsp-{{ environ }}-{{ playbook_vars.app_name }}"
         db_nsg: "ghtsp01-{{ environ }}-{{ playbook_vars.app_name }}-db-nsg"
