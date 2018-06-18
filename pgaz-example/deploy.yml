@@ -27,18 +27,15 @@
     - name: Get Tenant ID
       shell: az account show --query 'tenantId'
       register: tenant_id
-      when: key_vault_check.stdout == ""
 
     - name: Get User Name
       shell: az account show --query 'user.name'
       register: user_name
-      when: key_vault_check.stdout == ""
 
     - name: Get User Object ID
       shell: az ad user show --upn-or-object-id "{{ user_name.stdout }}" --query 'objectId'
       register: user_object_id
-      when: key_vault_check.stdout == ""
-
+    
     - name: Create Master Key Vault if Absent
       azure_rm_keyvault:
         resource_group: "{{ playbook_vars.resource_group }}"
@@ -64,11 +61,9 @@
     - name: get Admin Member List
       shell: az ad group member list --group "{{ playbook_vars.admin_access_group }}" --query '[].userPrincipalName'
       register: user_list
-      when: key_vault_check.stdout == ""
-
+  
     - set_fact:
         users: "{{ user_list.stdout }}"
-      when: key_vault_check.stdout == ""
 
     - name: Get Admin User Object IDs
       shell: az ad user show --upn-or-object-id "{{ item }}" --query 'objectId'
@@ -90,7 +85,7 @@
       register: dev_key_vault_check
       ignore_errors: yes
 
-    - name: Create Dev Key Vault if Absent V2
+    - name: Create Dev Key Vault if Absent
       azure_rm_keyvault:
         resource_group: "{{ playbook_vars.resource_group }}"
         vault_name: "{{ developer_key_vualt }}"
