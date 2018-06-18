@@ -110,7 +110,7 @@
               - recover
               - purge
       register: dev_key_vault
-      when: dev_key_vault_check.stdout == ""
+      when: dev_key_vault_check.stdout == "1"
 
     - name: get Devleoper Member List
       shell: az ad group member list --group "{{ playbook_vars.developer_access_group }}" --query '[].userPrincipalName'
