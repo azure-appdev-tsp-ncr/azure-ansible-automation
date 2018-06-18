@@ -3,7 +3,7 @@
 app_name: pgaz-pgrsql01
 administratorLogin: dbadmin
 version: "9.6"
-location: centraltus
+location: centralus
 admin_access_group: NCD Azure Flash News
 developer_access_group: NCD Azure Flash News
 resource_group: pgaz-example
