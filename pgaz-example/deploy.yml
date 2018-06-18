@@ -73,7 +73,6 @@
 
     - set_fact:
         object_ids: "{{ user_object_ids.results | map(attribute='stdout') | list }}"
-      when: key_vault_check.stdout == ""
 
     - name: Add Admin User Permissions
       shell: az keyvault set-policy --name "{{ master_key_vualt }}" --object-id "{{ item | replace('\"','') }}" --secret-permissions backup delete get list purge recover restore set
