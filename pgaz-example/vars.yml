@@ -1,0 +1,29 @@
+---
+# app_name must be less than 13 characters and must not contain special characters
+app_name: example
+administratorLogin: exampleadmin
+version: "9.6"
+location: eastus
+admin_access_group: A Valid AD Group
+developer_access_group: Another Valid AD Group
+resource_group: example-resources
+vnet_name: "{{ environ }}-example-vnet"
+subnet_name: "{{ environ }}-example-db-subnet"
+address_prefix: 10.0.0.0/29
+database_environment:
+  dev:
+    skuCapacity: 2
+    skuFamily: Gen4
+    skuName: GP_Gen4_2
+    skuSizeMB: 5120
+    skuTier: GeneralPurpose
+    backupRetentionDays: 7
+    geoRedundantBackup: Disabled
+  prod:
+    skuCapacity: 2
+    skuFamily: Gen4
+    skuName: GP_Gen4_2
+    skuSizeMB: 5120
+    skuTier: GeneralPurpose
+    backupRetentionDays: 7
+    geoRedundantBackup: Disabled

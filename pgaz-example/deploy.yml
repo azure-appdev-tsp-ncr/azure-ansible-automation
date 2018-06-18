@@ -1,0 +1,246 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Load Stack variables
+      include_vars:
+        file: vars.yml
+        name: playbook_vars
+
+    - set_fact:
+        deployment_name: "{{ environ }}-{{ playbook_vars.app_name }}-db-deployment"
+        serverName: "{{ environ }}-{{ playbook_vars.app_name }}"
+        master_key_vualt: "{{ environ }}-cloud-dbe"
+        developer_key_vualt: "{{ environ }}-{{ playbook_vars.app_name }}-app"
+        db_nsg: "{{ environ }}-{{ playbook_vars.app_name }}-db-nsg"
+
+    - name: Validate Resource Group
+      shell: az group show --name "{{ playbook_vars.resource_group }}" --query name
+      register: resource_group_validation
+      failed_when: resource_group_validation.stdout == ""
+
+    - name: Check for Master Key Vault
+      shell: az keyvault show --name "{{ master_key_vualt }}" --query 'name'
+      register: key_vault_check
+      ignore_errors: yes
+
+    - name: Get Tenant ID
+      shell: az account show --query 'tenantId'
+      register: tenant_id
+      when: key_vault_check.stdout == ""
+
+    - name: Get User Name
+      shell: az account show --query 'user.name'
+      register: user_name
+      when: key_vault_check.stdout == ""
+
+    - name: Get User Object ID
+      shell: az ad user show --upn-or-object-id "{{ user_name.stdout }}" --query 'objectId'
+      register: user_object_id
+      when: key_vault_check.stdout == ""
+
+    - name: Create Master Key Vault if Absent
+      azure_rm_keyvault:
+        resource_group: "{{ playbook_vars.resource_group }}"
+        vault_name: "{{ master_key_vualt }}"
+        sku:
+          name: standard
+        enabled_for_disk_encryption: yes
+        vault_tenant: "{{ tenant_id.stdout | replace('\"','') }}"
+        access_policies:
+          - object_id: "{{ user_object_id.stdout | replace('\"','') }}"
+            secrets:
+              - get
+              - list
+              - set
+              - delete
+              - backup
+              - restore
+              - recover
+              - purge
+      register: key_vault
+      when: key_vault_check.stdout == ""
+
+    - name: get Admin Member List
+      shell: az ad group member list --group "{{ playbook_vars.admin_access_group }}" --query '[].userPrincipalName'
+      register: user_list
+      when: key_vault_check.stdout == ""
+
+    - set_fact:
+        users: "{{ user_list.stdout }}"
+      when: key_vault_check.stdout == ""
+
+    - name: Get Admin User Object IDs
+      shell: az ad user show --upn-or-object-id "{{ item }}" --query 'objectId'
+      register: user_object_ids
+      with_items: "{{ users }}"
+      when: key_vault_check.stdout == ""
+
+    - set_fact:
+        object_ids: "{{ user_object_ids.results | map(attribute='stdout') | list }}"
+      when: key_vault_check.stdout == ""
+
+    - name: Add Admin User Permissions
+      shell: az keyvault set-policy --name "{{ master_key_vualt }}" --object-id "{{ item | replace('\"','') }}" --secret-permissions backup delete get list purge recover restore set
+      with_items: "{{ object_ids }}"
+      when: key_vault_check.stdout == ""
+
+    - name: Check for Developer Key Vault
+      shell: az keyvault show --name "{{ developer_key_vualt }}" --query 'name'
+      register: dev_key_vault_check
+      ignore_errors: yes
+
+    - name: Create Devleoper Key Vault if Absent
+      azure_rm_keyvault:
+        resource_group: "{{ playbook_vars.resource_group }}"
+        vault_name: "{{ developer_key_vualt }}"
+        sku:
+          name: standard
+        enabled_for_disk_encryption: yes
+        vault_tenant: "{{ tenant_id.stdout | replace('\"','') }}"
+        access_policies:
+          - object_id: "{{ user_object_id.stdout | replace('\"','') }}"
+            secrets:
+              - get
+              - list
+              - set
+              - delete
+              - backup
+              - restore
+              - recover
+              - purge
+      register: dev_key_vault
+      when: dev_key_vault_check.stdout == ""
+
+    - name: get Devleoper Member List
+      shell: az ad group member list --group "{{ playbook_vars.developer_access_group }}" --query '[].userPrincipalName'
+      register: dev_user_list
+      when: dev_key_vault_check.stdout == ""
+
+    - set_fact:
+        dev_users: "{{ dev_user_list.stdout }}"
+      when: dev_key_vault_check.stdout == ""
+
+    - name: Get Devleoper User Object IDs
+      shell: az ad user show --upn-or-object-id "{{ item }}" --query 'objectId'
+      register: dev_user_object_ids
+      with_items: "{{ dev_users }}"
+      when: dev_key_vault_check.stdout == ""
+
+    - set_fact:
+        dev_object_ids: "{{ dev_user_object_ids.results | map(attribute='stdout') | list }}"
+      when: dev_key_vault_check.stdout == ""
+
+    - name: Add Admin User Permissions
+      shell: az keyvault set-policy --name "{{ developer_key_vualt }}" --object-id "{{ item | replace('\"','') }}" --secret-permissions backup delete get list purge recover restore set
+      with_items: "{{ object_ids }}"
+      when: dev_key_vault_check.stdout == ""
+
+    - name: Add Devleoper User Permissions
+      shell: az keyvault set-policy --name "{{ developer_key_vualt }}" --object-id "{{ item | replace('\"','') }}" --secret-permissions get list
+      with_items: "{{ dev_object_ids }}"
+      when: dev_key_vault_check.stdout == ""
+
+    - name: Attempt to Retreieve Password
+      shell: az keyvault secret show --vault-name "{{ master_key_vualt }}" --name spsc --query 'value'
+      register: master_credential_attempt
+      ignore_errors: true
+
+    - set_fact:
+        master_credential: "{{ master_credential_attempt.stdout }}"
+      when: master_credential_attempt.stdout != ''
+
+    - name: Generate Master Secret if None Found
+      shell: openssl rand -base64 18
+      register: generated_master_credential
+      when: master_credential_attempt.stdout == ''
+
+    - set_fact:
+        appended_master_credential: "{{ generated_master_credential.stdout }}()"
+      when: master_credential_attempt.stdout == ''
+
+    - name: Add Master Secret if None Found
+      shell: az keyvault secret set --name spsc --vault-name "{{ master_key_vualt }}" --value "{{ appended_master_credential }}"
+      when: master_credential_attempt.stdout == ''
+
+    - name: Second Attempt to Retreieve Password
+      shell: az keyvault secret show --vault-name "{{ master_key_vualt }}" --name spsc --query 'value'
+      register: second_master_credential_attempt
+      when: master_credential_attempt.stdout == ''
+
+    - set_fact:
+        master_credential: "{{ second_master_credential_attempt.stdout }}"
+      when: master_credential_attempt.stdout == ''
+
+    - name: Template the Template
+      template: src=./templates/pgsqltemp.json.j2 dest=files/formatted-temp.json
+
+    - name: Template the Parameters
+      template: src=./templates/pgsqlparam.json.j2 dest=files/formatted-param.json
+
+    - name: Create Azure Deploy
+      azure_rm_deployment:
+        deployment_name: "{{ deployment_name }}"
+        resource_group_name: "{{ playbook_vars.resource_group }}"
+        state: present
+        location: "{{ playbook_vars.location }}"
+        template: "{{ lookup('file', './files/formatted-temp.json') }}"
+        parameters: "{{ lookup('file', './files/formatted-param.json') }}"
+      register: db_instance
+
+    - name: Create or update PostgreSQL Database
+      azure_rm_postgresqldatabase:
+        resource_group: "{{ playbook_vars.resource_group }}"
+        server_name: "{{ serverName }}"
+        name: "{{ playbook_vars.app_name }}"
+
+    - name: Allow Azure Services to Connect
+      shell: az postgres server firewall-rule create --resource-group "{{ playbook_vars.resource_group }}" --server "{{ serverName }}" --name AllowAzServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
+
+    - name: Check for Virtual Network
+      shell: az network vnet show --resource-group "{{ playbook_vars.resource_group }}" --name "{{ playbook_vars.vnet_name }}"
+      register: get_vnet
+
+    - set_fact:
+        get_vnet: "{{ get_vnet.stdout }}"
+
+    - name: Create Virtual Network if None Found
+      shell: az network vnet create --name "{{ playbook_vars.vnet_name }}" --resource-group "{{ playbook_vars.resource_group }}" --address-prefixes "{{ playbook_vars.address_prefix }}"
+      when: get_vnet == ""
+
+    - name: Check for Subnet
+      shell: az network vnet subnet show --resource-group "{{ playbook_vars.resource_group }}" --vnet-name "{{ playbook_vars.vnet_name }}" --name "{{ playbook_vars.subnet_name }}"
+      register: subnet
+
+    - set_fact:
+        subnet: "{{ subnet.stdout }}"
+
+    - name: Create Subnet if None Found
+      shell: az network vnet subnet create --resource-group "{{ playbook_vars.resource_group }}" --vnet-name "{{ playbook_vars.vnet_name }}" --name "{{ playbook_vars.subnet_name }}" --address-prefix "{{ playbook_vars.address_prefix }}" --service-endpoints Microsoft.SQL
+      when: subnet == ""
+
+    - name: Create Vnet Rule
+      shell: az postgres server vnet-rule create --name subnetRule --resource-group "{{ playbook_vars.resource_group }}" --server-name "{{ serverName }}" --subnet "{{ playbook_vars.subnet_name }}" --vnet-name "{{ playbook_vars.vnet_name }}"
+
+    - name: Check for Network Security Group
+      shell: az network nsg show --name "{{ db_nsg }}" --resource-group "{{ playbook_vars.resource_group }}"
+      register: nsg_check
+
+    - set_fact:
+        nsg_check: "{{ nsg_check.stdout }}"
+
+    - name: Create Network Security Group
+      shell: az network nsg create --name "{{ db_nsg }}" --resource-group "{{ playbook_vars.resource_group }}"
+      when: nsg_check == ""
+
+    - name: Create Network Security Group Outbound Rule
+      shell: az network nsg rule create --name AllowOutbound --nsg-name "{{ db_nsg }}" --priority 1000 --resource-group "{{ playbook_vars.resource_group }}" --direction Outbound --destination-port-ranges 5432 --access Allow --source-address-prefixes VirtualNetwork --destination-address-prefixes VirtualNetwork --protocol Tcp --description "Allow some stuff. Or maybe everything. Lets go with everything."
+
+    - name: Create Network Security Group Inbound Rule
+      shell: az network nsg rule create --name AllowInbound --nsg-name "{{ db_nsg }}" --priority 1000 --resource-group "{{ playbook_vars.resource_group }}" --direction Inbound --source-port-ranges '*' --destination-port-ranges 5432 --access Allow --destination-address-prefixes VirtualNetwork --source-address-prefixes VirtualNetwork --protocol Tcp --description "Allow some stuff. Or maybe everything. Lets go with everything."
+
+    # - name: Get Domain Name
+    #   shell: az postgres server show --resource-group "{{ playbook_vars.resource_group }}" --name "{{ serverName }}"
+    #   register: domain_name
+    #
+    # - debug: var=domain_name

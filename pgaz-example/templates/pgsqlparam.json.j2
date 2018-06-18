@@ -1,0 +1,38 @@
+{
+  "administratorLogin": {
+    "value": "{{ playbook_vars.administratorLogin }}"
+  },
+  "administratorLoginPassword": {
+    "value": {{ master_credential }}
+  },
+  "skuCapacity": {
+    "value": {{ playbook_vars.database_environment[environ].skuCapacity }}
+  },
+  "skuFamily": {
+    "value": "{{ playbook_vars.database_environment[environ].skuFamily }}"
+  },
+  "skuName": {
+    "value": "{{ playbook_vars.database_environment[environ].skuName }}"
+  },
+  "skuSizeMB": {
+    "value": {{ playbook_vars.database_environment[environ].skuSizeMB }}
+  },
+  "skuTier": {
+    "value": "{{ playbook_vars.database_environment[environ].skuTier }}"
+  },
+  "backupRetentionDays": {
+    "value": {{ playbook_vars.database_environment[environ].backupRetentionDays }}
+  },
+  "geoRedundantBackup": {
+    "value": "{{ playbook_vars.database_environment[environ].geoRedundantBackup }}"
+  },
+  "serverName": {
+    "value": "{{ serverName }}"
+  },
+  "version": {
+    "value": "{{ playbook_vars.version }}"
+  },
+  "location": {
+    "value": "{{ playbook_vars.location }}"
+  }
+}
