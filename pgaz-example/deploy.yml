@@ -90,7 +90,7 @@
       register: dev_key_vault_check
       ignore_errors: yes
 
-    - name: Create Developer Key Vault if Absent
+    - name: Create Dev Key Vault if Absent V2
       azure_rm_keyvault:
         resource_group: "{{ playbook_vars.resource_group }}"
         vault_name: "{{ developer_key_vualt }}"
