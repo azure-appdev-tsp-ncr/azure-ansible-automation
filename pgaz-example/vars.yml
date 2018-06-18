@@ -1,15 +1,15 @@
 ---
 # app_name must be less than 13 characters and must not contain special characters
-app_name: example
-administratorLogin: exampleadmin
+app_name: pgaz-pgrsql01
+administratorLogin: dbadmin
 version: "9.6"
-location: eastus
-admin_access_group: A Valid AD Group
-developer_access_group: Another Valid AD Group
-resource_group: example-resources
+location: centraltus
+admin_access_group: NCD Azure Flash News
+developer_access_group: NCD Azure Flash News
+resource_group: pgaz-example
 vnet_name: "{{ environ }}-example-vnet"
 subnet_name: "{{ environ }}-example-db-subnet"
-address_prefix: 10.0.0.0/29
+address_prefix: 172.17.0.0/24
 database_environment:
   dev:
     skuCapacity: 2

@@ -10,9 +10,9 @@
     - set_fact:
         deployment_name: "{{ environ }}-{{ playbook_vars.app_name }}-db-deployment"
         serverName: "{{ environ }}-{{ playbook_vars.app_name }}"
-        master_key_vualt: "{{ environ }}-cloud-dbe"
-        developer_key_vualt: "{{ environ }}-{{ playbook_vars.app_name }}-app"
-        db_nsg: "{{ environ }}-{{ playbook_vars.app_name }}-db-nsg"
+        master_key_vualt: "ghtsp01-{{ environ }}-cloud-dbe"
+        developer_key_vualt: "ghtsp01-{{ environ }}-{{ playbook_vars.app_name }}-app"
+        db_nsg: "ghtsp01-{{ environ }}-{{ playbook_vars.app_name }}-db-nsg"
 
     - name: Validate Resource Group
       shell: az group show --name "{{ playbook_vars.resource_group }}" --query name
