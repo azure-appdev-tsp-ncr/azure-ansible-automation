@@ -187,7 +187,7 @@
         resource_group: "{{ playbook_vars.resource_group }}"
         server_name: "{{ serverName }}"
         name: "{{ playbook_vars.app_name | replace('\"','') }}"
-        ignore_errors: true
+      ignore_errors: true
 
     - name: Allow Azure Services to Connect
       shell: az postgres server firewall-rule create --resource-group "{{ playbook_vars.resource_group }}" --server "{{ serverName }}" --name AllowAzServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
