@@ -187,6 +187,7 @@
         resource_group: "{{ playbook_vars.resource_group }}"
         server_name: "{{ serverName }}"
         name: "{{ playbook_vars.app_name | replace('\"','') }}"
+        ignore_errors: true
 
     - name: Allow Azure Services to Connect
       shell: az postgres server firewall-rule create --resource-group "{{ playbook_vars.resource_group }}" --server "{{ serverName }}" --name AllowAzServices --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0
@@ -233,8 +234,8 @@
     - name: Create Network Security Group Inbound Rule
       shell: az network nsg rule create --name AllowInbound --nsg-name "{{ db_nsg }}" --priority 1000 --resource-group "{{ playbook_vars.resource_group }}" --direction Inbound --source-port-ranges '*' --destination-port-ranges 5432 --access Allow --destination-address-prefixes VirtualNetwork --source-address-prefixes VirtualNetwork --protocol Tcp --description "Allow some stuff. Or maybe everything. Lets go with everything."
 
-    # - name: Get Domain Name
-    #   shell: az postgres server show --resource-group "{{ playbook_vars.resource_group }}" --name "{{ serverName }}"
-    #   register: domain_name
-    #
-    # - debug: var=domain_name
+    - name: Get Domain Name
+      shell: az postgres server show --resource-group "{{ playbook_vars.resource_group }}" --name "{{ serverName }}"
+      register: domain_name
+    
+    - debug: var=domain_name
